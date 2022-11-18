@@ -38,6 +38,7 @@ public class UserManagement {
             user.setLastName(chat.getLastName());
             user.setUserName(chat.getUserName());
             user.setUserUtc(3);
+            user.setUserPhone(msg.getContact().getPhoneNumber());
             user.setRegisteredAt(LocalDateTime.now());
             userRepository.save(user);
             log.info("user saved: " + user);
@@ -87,5 +88,14 @@ public class UserManagement {
     public void deleteUser(long chatId) {
         userRepository.deleteById(chatId);
         log.info("User " + chatId + " and all his reminders have been deleted.");
+    }
+
+    public void setUserPhoneNumber(Long chatId, String userPhone) {
+        userRepository.setUserPhoneByChatID(chatId, userPhone);
+    }
+
+    public boolean checkUserPhoneNumber(Long chatId) {
+        String userPhone = userRepository.getUserPhoneByChatID(chatId);
+        return userPhone != null && !userPhone.isBlank();
     }
 }

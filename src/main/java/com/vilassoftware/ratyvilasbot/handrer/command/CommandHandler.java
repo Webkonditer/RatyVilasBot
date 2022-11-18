@@ -4,12 +4,14 @@ import com.vilassoftware.ratyvilasbot.handrer.callback.about.AboutBot;
 import com.vilassoftware.ratyvilasbot.handrer.callback.help.Help;
 import com.vilassoftware.ratyvilasbot.handrer.callback.UnknownCommand;
 import com.vilassoftware.ratyvilasbot.handrer.callback.delete.DeleteReminder;
+import com.vilassoftware.ratyvilasbot.handrer.callback.menulevel.CreateMenuLevel;
 import com.vilassoftware.ratyvilasbot.handrer.callback.newreminder.CreateNewReminder;
 import com.vilassoftware.ratyvilasbot.handrer.callback.setutc.SetUtc;
 import com.vilassoftware.ratyvilasbot.handrer.callback.show.ShowAllReminders;
 import com.vilassoftware.ratyvilasbot.handrer.callback.start.Start;
 import com.vilassoftware.ratyvilasbot.bot.TelegramBot;
 import com.vilassoftware.ratyvilasbot.handrer.callback.unsubscribe.UnsubscribeUser;
+import com.vilassoftware.ratyvilasbot.service.UserManagement;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -30,8 +32,10 @@ public class CommandHandler {
     private final AboutBot aboutBot;
     private final SetUtc setUtc;
     private final UnsubscribeUser unsubscribeUser;
+    private final UserManagement userManagement;
+    private final CreateMenuLevel createMenuLevel;
 
-    public CommandHandler(TelegramBot telegramBot, DeleteReminder newReminder, DeleteReminder deleteReminder, CreateNewReminder createNewReminder, Help help, UnknownCommand unknownCommand, ShowAllReminders showAllReminders, Start start, AboutBot aboutBot, SetUtc setUtc, UnsubscribeUser unsubscribeUser) {
+    public CommandHandler(TelegramBot telegramBot, DeleteReminder newReminder, DeleteReminder deleteReminder, CreateNewReminder createNewReminder, Help help, UnknownCommand unknownCommand, ShowAllReminders showAllReminders, Start start, AboutBot aboutBot, SetUtc setUtc, UnsubscribeUser unsubscribeUser, UserManagement userManagement, CreateMenuLevel createMenuLevel) {
         this.telegramBot = telegramBot;
         this.deleteReminder = deleteReminder;
         this.createNewReminder = createNewReminder;
@@ -42,6 +46,8 @@ public class CommandHandler {
         this.aboutBot = aboutBot;
         this.setUtc = setUtc;
         this.unsubscribeUser = unsubscribeUser;
+        this.userManagement = userManagement;
+        this.createMenuLevel = createMenuLevel;
     }
 
     /**
@@ -54,8 +60,12 @@ public class CommandHandler {
     public void commandProcessing(Update update, long chatId, String messageText){
         Optional<Command> command = Command.parseCommand(messageText);
         if(command.isPresent()) {
+            if(!userManagement.checkUserPhoneNumber(chatId)){      //Если пользователь не предоставил телефон
+                start.startCallBack(update);
+                return;
+            }
             switch (command.get()) {
-                case START_COMAND -> start.startCallBack(chatId, update);
+                case START_COMAND -> createMenuLevel.getMenu(chatId, 1, 1);
                 case HELP_COMAND -> help.helpCallBack(chatId);
                 case CREATE_COMAND -> createNewReminder.preparingToCreateNewReminder(chatId);
                 case SHOW_COMAND -> showAllReminders.showMyReminders(chatId);

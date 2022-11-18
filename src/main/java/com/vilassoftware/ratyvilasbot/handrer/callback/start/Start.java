@@ -5,6 +5,7 @@ import com.vilassoftware.ratyvilasbot.service.UserManagement;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
@@ -19,9 +20,9 @@ public class Start {
 
     private static final String GREETING = "\uD83D\uDE00 Привет ";
 
-    private static final String WELCOME_MESSAGE = "\n\nЯ - твоя вторая память. Можешь смело доверить мне напоминать тебе о важных событиях. \n\n" +
-            "Если твой часовой пояс отличается от Московского, нажми сюда /set_utc \n\n" +
-            "Теперь давай создадим твое первое напоминание. \nНажми кнопку \"Создать новое\" в меню ниже.";
+    private static final String WELCOME_MESSAGE = "!\n\nЧтобы запустить бота, отправь, пожалуйста, мне свои контакты." +
+            "\n\nДля этого нажми кнопку внизу и подтверди передучу контактов.";
+    private static final String SHARE_PHONE_NUMBER = "Поделиться контактами";
 
     private final UserManagement userManagement;
     private final SendingMessages sendingMessages;
@@ -34,29 +35,29 @@ public class Start {
     /**
      *Обработка команды /start.
      *
-     * @param chatId  id текущего чата
      * @param update  объект сообщения
      */
-    public void startCallBack(long chatId, Update update){
-            userManagement.registerUser(update.getMessage());
-            startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
+    public void startCallBack(Update update){
+        Chat chat;
+        if(update.hasMyChatMember()){
+            chat = update.getMyChatMember().getChat();
+        } else {
+            chat = update.getMessage().getChat();
+        }
+        startCommandReceived(chat.getId(), chat.getFirstName());
     }
 
     /**
-     *Отправка приветственного сообщения и выбор часового пояса.
+     *Отправка приветственного сообщения и кнопки запроса телефона.
      *
      * @param chatId  id текущего чата
      * @param firstName  имя пользователя
      */
     public void startCommandReceived(long chatId, String firstName) {
 
-//        String message = GREETING + firstName + "! " + WELCOME_MESSAGE;
-//        sendingMessages.sendMessageWithMenu(chatId, message);
-//        log.info("A welcome message has been sent to the user " + firstName + ", Id: " + chatId);
-
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
-        sendMessage.setText("You send /start");
+        sendMessage.setText(GREETING + firstName + WELCOME_MESSAGE);
 
         // Создаем клавиуатуру
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
@@ -73,7 +74,7 @@ public class Start {
         // Добавляем кнопки в первую строчку клавиатуры
         KeyboardButton keyboardButton = new KeyboardButton();
 
-        keyboardButton.setText("Share your number >");
+        keyboardButton.setText(SHARE_PHONE_NUMBER);
         keyboardButton.setRequestContact(true);
         keyboardFirstRow.add(keyboardButton);
 
@@ -87,5 +88,3 @@ public class Start {
     }
 
 }
-
-

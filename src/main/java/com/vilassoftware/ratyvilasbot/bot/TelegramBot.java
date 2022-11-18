@@ -1,10 +1,13 @@
 package com.vilassoftware.ratyvilasbot.bot;
 
 import com.vilassoftware.ratyvilasbot.handrer.callback.UnknownCommand;
+import com.vilassoftware.ratyvilasbot.handrer.callback.menulevel.CreateMenuLevel;
+import com.vilassoftware.ratyvilasbot.handrer.callback.start.Start;
 import com.vilassoftware.ratyvilasbot.handrer.command.ButtonHandler;
 import com.vilassoftware.ratyvilasbot.handrer.command.Command;
 import com.vilassoftware.ratyvilasbot.handrer.command.CommandHandler;
 import com.vilassoftware.ratyvilasbot.service.CheckingAndSavingNewReminder;
+import com.vilassoftware.ratyvilasbot.service.UserManagement;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -25,6 +28,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final ButtonHandler buttonHandler;
     private final UnknownCommand unknownCommand;
     private final BotConfig config;
+    private final UserManagement userManagement;
+    private final Start start;
+    private final CreateMenuLevel createMenuLevel;
 
     private final Map<Long,Boolean> newMessageFlag = new HashMap<>(); //Флаг добавления нового сообщения
 
@@ -32,13 +38,19 @@ public class TelegramBot extends TelegramLongPollingBot {
                        @Lazy CheckingAndSavingNewReminder newReminderCreate,
                        @Lazy CommandHandler commandHandler,
                        @Lazy ButtonHandler buttonHandler,
-                       @Lazy UnknownCommand unknownCommand)
+                       @Lazy UnknownCommand unknownCommand,
+                       @Lazy UserManagement userManagement,
+                       @Lazy Start start,
+                       @Lazy CreateMenuLevel createMenuLevel)
     {
         this.commandHandler = commandHandler;
         this.config = config;
         this.newReminderCreate = newReminderCreate;
         this.buttonHandler = buttonHandler;
         this.unknownCommand = unknownCommand;
+        this.userManagement = userManagement;
+        this.start = start;
+        this.createMenuLevel = createMenuLevel;
         setupTextMenu();
     }
 
@@ -62,11 +74,20 @@ public class TelegramBot extends TelegramLongPollingBot {
      */
     @Override
     public void onUpdateReceived(Update update) {
+        if(update.hasMyChatMember()){                                                //Если новый пользователь
+            start.startCallBack(update);
+            return;
+        }
+
+        if(update.hasMessage() && update.getMessage().getContact() != null){        //Если сообщение содержит контакт
+            userManagement.registerUser(update.getMessage());
+            createMenuLevel.getMenu(update.getMessage().getChatId(), 1, 1);
+            return;
+        }
 
         if (update.hasMessage() && update.getMessage().hasText()) {                 //Если сообщение содержит текст
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-
             if (newMessageFlag.get(chatId) != null && newMessageFlag.get(chatId)) { //Если вводится новое напоминание
                 newMessageFlag.put(chatId, false);
                 newReminderCreate.createNewReminder(chatId, messageText);
@@ -75,7 +96,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } else if (update.hasCallbackQuery()) {                                     //Если нажата кнопка.
             buttonHandler.processingOfButtons(update);
-        } else{
+        } else if(update.hasMessage()){
             unknownCommand.unknownCommandCallBack(update.getMessage().getChatId());
         }
     }
